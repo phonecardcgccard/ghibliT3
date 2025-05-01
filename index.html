@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Studio Ghibli AI Image Generator</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #e9f5e9 url('https://i.ibb.co/0q5q8gF/ghibli-bg.jpg') no-repeat center/cover;
+      color: #2f553c;
+      text-align: center;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+      text-shadow: 2px 2px #cbe7c7;
+    }
+    p {
+      margin-bottom: 2rem;
+      color: #41694c;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    input[type=\"text\"] {
+      width: 80%;
+      padding: 0.8rem;
+      margin-bottom: 1rem;
+      border: 1px solid #a2d3a1;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+    }
+    button {
+      background: #66bb6a;
+      color: #fff;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 0.5rem;
+    }
+    button:hover {
+      background: #519c57;
+    }
+    #loading {
+      display: none;
+      margin: 1rem 0;
+    }
+    #result-img {
+      margin-top: 1.5rem;
+      max-width: 100%;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .download-link {
+      display: inline-block;
+      margin-top: 1rem;
+      color: #2f553c;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Studio Ghibli AI Image Generator</h1>
+    <p>Enter a description and create a magical image in Studio Ghibli style — free & watermark-free!</p>
+    
+    <input type="text" id="prompt-input" placeholder="A quiet forest with a little spirit..."/>
+    <br/>
+    <button onclick="generateImage()">Generate Image</button>
+
+    <div id="loading">🎨 Generating your Ghibli world...</div>
+
+    <div id="result">
+      <img id="result-img" src="" alt="" style="display:none;"/>
+      <a id="download-link" href="#" download="ghibli-image.png" class="download-link" style="display:none;">Download Image</a>
+    </div>
+  </div>
+
+  <script>
+    function generateImage() {
+      const prompt = document.getElementById('prompt-input').value.trim();
+      if (!prompt) {
+        alert('Please enter a description!');
+        return;
+      }
+
+      const loading = document.getElementById('loading');
+      const resultImg = document.getElementById('result-img');
+      const downloadLink = document.getElementById('download-link');
+
+      loading.style.display = 'block';
+      resultImg.style.display = 'none';
+      downloadLink.style.display = 'none';
+
+      const apiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?noLogo=true`;
+
+      // Delay added for user perception of loading (optional)
+      setTimeout(() => {
+        resultImg.src = apiUrl;
+        resultImg.onload = () => {
+          loading.style.display = 'none';
+          resultImg.style.display = 'block';
+          downloadLink.href = apiUrl;
+          downloadLink.style.display = 'inline-block';
+        }
+      }, 500);
+    }
+  </script>
+</body>
+</html>
+
