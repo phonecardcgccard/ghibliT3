@@ -180,22 +180,35 @@ function getBase64FromFile(file) {
 // Function to generate image using Pollinations.ai API
 async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
     try {
+        // Validate styleStrength
+        if (styleStrength < 0 || styleStrength > 100) {
+            throw new Error("Style strength must be between 0 and 100.");
+        }
+
+        // Construct the API endpoint and prompt
         const apiUrl = 'https://image.pollinations.ai/prompt/';
         const fullPrompt = `${prompt}, style of Studio Ghibli, no logo, no watermark, no text`;
         const encodedPrompt = encodeURIComponent(fullPrompt);
 
+        console.log("API Request URL:", `${apiUrl}${encodedPrompt}`);
+
         if (imageBase64) {
+            // Image-to-image generation
             const params = new URLSearchParams();
             params.append('image', imageBase64);
-            params.append('styleStrength', styleStrength / 100);
+            params.append('styleStrength', styleStrength / 100); // Convert to decimal
+
+            console.log("Image-to-Image API Parameters:", params.toString());
 
             const response = await fetch(`${apiUrl}${encodedPrompt}?nologo=true`, {
                 method: 'POST',
-                body: params
+                body: params,
             });
 
+            // Check response status
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                throw new Error(`Image-to-Image HTTP error: ${response.status} - ${errorText}`);
             }
 
             const blob = await response.blob();
@@ -203,26 +216,31 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
 
             return {
                 success: true,
-                imageUrl: imageUrl
+                imageUrl: imageUrl,
             };
         } else {
+            // Text-to-image generation
             const imageUrl = `${apiUrl}${encodedPrompt}?nologo=true`;
+
+            console.log("Text-to-Image API URL:", imageUrl);
+
             const response = await fetch(imageUrl, { method: 'HEAD' });
 
+            // Check response status
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`Text-to-Image HTTP error: ${response.status}`);
             }
 
             return {
                 success: true,
-                imageUrl: imageUrl
+                imageUrl: imageUrl,
             };
         }
     } catch (error) {
-        console.error('Error in generateImage:', error);
+        console.error("Error in generateImage:", error.message);
         return {
             success: false,
-            error: error.message
+            error: error.message,
         };
     }
 }
@@ -238,3 +256,4 @@ downloadBtn.addEventListener('click', () => {
     a.click();
     document.body.removeChild(a);
 });
+
