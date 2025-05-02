@@ -127,7 +127,7 @@ generateBtn.addEventListener('click', async () => {
             return;
         }
         // Add default Ghibli style to the text prompt
-        prompt += ", Studio Ghibli style";
+        prompt = `${prompt}, Studio Ghibli style`;
     } else {
         if (!uploadedImage) {
             alert('Please upload an image');
@@ -189,25 +189,19 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
 
         // Construct the API endpoint and prompt
         const apiUrl = 'https://image.pollinations.ai/prompt/';
-        const fullPrompt = `${prompt}, no logo, no watermark, no text`;
+        const fullPrompt = `${prompt}, no logo, no watermark, no text`.trim();
         const encodedPrompt = encodeURIComponent(fullPrompt);
 
-        console.log("API Request URL:", `${apiUrl}${encodedPrompt}`);
-
         if (imageBase64) {
-            // Image-to-image generation
             const params = new URLSearchParams();
             params.append('image', imageBase64);
-            params.append('styleStrength', styleStrength / 100); // Convert to decimal
-
-            console.log("Image-to-Image API Parameters:", params.toString());
+            params.append('styleStrength', styleStrength / 100);
 
             const response = await fetch(`${apiUrl}${encodedPrompt}?nologo=true`, {
                 method: 'POST',
                 body: params,
             });
 
-            // Check response status
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new Error(`Image-to-Image HTTP error: ${response.status} - ${errorText}`);
@@ -216,34 +210,19 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
             const blob = await response.blob();
             const imageUrl = URL.createObjectURL(blob);
 
-            return {
-                success: true,
-                imageUrl: imageUrl,
-            };
+            return { success: true, imageUrl };
         } else {
-            // Text-to-image generation
             const imageUrl = `${apiUrl}${encodedPrompt}?nologo=true`;
-
-            console.log("Text-to-Image API URL:", imageUrl);
-
             const response = await fetch(imageUrl, { method: 'HEAD' });
 
-            // Check response status
             if (!response.ok) {
                 throw new Error(`Text-to-Image HTTP error: ${response.status}`);
             }
 
-            return {
-                success: true,
-                imageUrl: imageUrl,
-            };
+            return { success: true, imageUrl };
         }
     } catch (error) {
-        console.error("Error in generateImage:", error.message);
-        return {
-            success: false,
-            error: error.message,
-        };
+        return { success: false, error: error.message };
     }
 }
 
@@ -258,3 +237,4 @@ downloadBtn.addEventListener('click', () => {
     a.click();
     document.body.removeChild(a);
 });
+
