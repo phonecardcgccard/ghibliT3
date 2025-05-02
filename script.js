@@ -19,14 +19,21 @@ const styleStrengthValue = document.getElementById('style-strength-value');
 let uploadedImage = null;
 let generatedImageUrl = null;
 
+// Debounce utility
+function debounce(func, delay) {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), delay);
+    };
+}
+
 // Tab switching functionality
 tabButtons.forEach(button => {
     button.addEventListener('click', () => {
-        // Remove active class from all buttons and contents
         tabButtons.forEach(btn => btn.classList.remove('active'));
         tabContents.forEach(content => content.classList.remove('active'));
-        
-        // Add active class to clicked button and corresponding content
+
         button.classList.add('active');
         const tabId = button.getAttribute('data-tab');
         document.getElementById(`${tabId}-tab`).classList.add('active');
@@ -34,9 +41,9 @@ tabButtons.forEach(button => {
 });
 
 // Style strength slider
-styleStrengthSlider.addEventListener('input', () => {
+styleStrengthSlider.addEventListener('input', debounce(() => {
     styleStrengthValue.textContent = `${styleStrengthSlider.value}%`;
-});
+}, 300));
 
 // Image upload functionality
 uploadArea.addEventListener('click', () => {
@@ -55,7 +62,7 @@ uploadArea.addEventListener('dragleave', () => {
 uploadArea.addEventListener('drop', (e) => {
     e.preventDefault();
     uploadArea.classList.remove('dragover');
-    
+
     if (e.dataTransfer.files.length) {
         handleImageUpload(e.dataTransfer.files[0]);
     }
@@ -81,55 +88,64 @@ function handleImageUpload(file) {
         alert('Please upload an image file');
         return;
     }
-    
+    if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5 MB');
+        return;
+    }
+
     uploadedImage = file;
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
         imagePreview.src = e.target.result;
         previewContainer.hidden = false;
         uploadArea.hidden = true;
     };
-    
+
+    reader.onerror = () => {
+        alert('Error reading file. Please try again.');
+    };
+
     reader.readAsDataURL(file);
 }
 
 // Generate image functionality
 generateBtn.addEventListener('click', async () => {
+    if (styleStrengthSlider.value <= 0) {
+        alert('Style strength must be greater than 0');
+        return;
+    }
+
     const activeTab = document.querySelector('.tab-btn.active').getAttribute('data-tab');
     let prompt = '';
     let imageBase64 = null;
-    
+
     if (activeTab === 'text') {
         prompt = document.getElementById('prompt').value.trim();
         if (!prompt) {
             alert('Please enter a prompt');
             return;
         }
-    } else { // Image tab
+    } else {
         if (!uploadedImage) {
             alert('Please upload an image');
             return;
         }
-        
-        // Get base64 of uploaded image
+
         imageBase64 = await getBase64FromFile(uploadedImage);
         prompt = document.getElementById('image-prompt').value.trim() || 'Convert to Studio Ghibli style';
     }
-    
-    // Show loading indicator
+
     resultPlaceholder.hidden = true;
     resultImage.hidden = true;
     loadingIndicator.hidden = false;
     generateBtn.disabled = true;
     downloadBtn.disabled = true;
-    
+
     try {
-        // Generate image using Pollinations.ai API
         const result = await generateImage(prompt, imageBase64, styleStrengthSlider.value);
-        
+
         if (result.success) {
-            // Display the generated image
             generatedImageUrl = result.imageUrl;
             resultImage.src = generatedImageUrl;
             resultImage.hidden = false;
@@ -154,7 +170,6 @@ function getBase64FromFile(file) {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = () => {
-            // Remove the data:image/xxx;base64, prefix
             const base64 = reader.result.split(',')[1];
             resolve(base64);
         };
@@ -165,52 +180,39 @@ function getBase64FromFile(file) {
 // Function to generate image using Pollinations.ai API
 async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
     try {
-        // Construct the API request based on whether it's text-to-image or image-to-image
         const apiUrl = 'https://image.pollinations.ai/prompt/';
-        
-        // Add 'no logo' to the prompt to remove watermark
-        let fullPrompt = `${prompt}, style of Studio Ghibli, no logo, no watermark, no text`;
-        
-        // Encode the prompt for URL
+        const fullPrompt = `${prompt}, style of Studio Ghibli, no logo, no watermark, no text`;
         const encodedPrompt = encodeURIComponent(fullPrompt);
-        
+
         if (imageBase64) {
-            // Image-to-image generation
-            // For image-to-image, we need to include the image data and style strength
             const params = new URLSearchParams();
             params.append('image', imageBase64);
-            params.append('styleStrength', styleStrength / 100); // Convert percentage to 0-1 range
-            
-            // Make a POST request to the Pollinations API
-            // Add nologo parameter to ensure watermark removal
+            params.append('styleStrength', styleStrength / 100);
+
             const response = await fetch(`${apiUrl}${encodedPrompt}?nologo=true`, {
                 method: 'POST',
                 body: params
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const blob = await response.blob();
             const imageUrl = URL.createObjectURL(blob);
-            
+
             return {
                 success: true,
                 imageUrl: imageUrl
             };
         } else {
-            // Text-to-image generation (simpler, just needs the prompt)
-            // For Pollinations.ai, we can directly use the URL with the encoded prompt
-            // Add 'nologo=true' parameter to ensure watermark removal
             const imageUrl = `${apiUrl}${encodedPrompt}?nologo=true`;
-            
-            // Verify the image is accessible
             const response = await fetch(imageUrl, { method: 'HEAD' });
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             return {
                 success: true,
                 imageUrl: imageUrl
@@ -228,8 +230,7 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
 // Download functionality
 downloadBtn.addEventListener('click', () => {
     if (!generatedImageUrl) return;
-    
-    // Create a temporary link element
+
     const a = document.createElement('a');
     a.href = generatedImageUrl;
     a.download = `ghibli-style-image-${Date.now()}.png`;
