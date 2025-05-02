@@ -126,6 +126,8 @@ generateBtn.addEventListener('click', async () => {
             alert('Please enter a prompt');
             return;
         }
+        // Add default Ghibli style to the text prompt
+        prompt += ", Studio Ghibli style";
     } else {
         if (!uploadedImage) {
             alert('Please upload an image');
@@ -133,7 +135,7 @@ generateBtn.addEventListener('click', async () => {
         }
 
         imageBase64 = await getBase64FromFile(uploadedImage);
-        prompt = document.getElementById('image-prompt').value.trim() || 'Convert to Studio Ghibli style';
+        prompt = document.getElementById('image-prompt').value.trim() || 'Studio Ghibli style';
     }
 
     resultPlaceholder.hidden = true;
@@ -187,7 +189,7 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
 
         // Construct the API endpoint and prompt
         const apiUrl = 'https://image.pollinations.ai/prompt/';
-        const fullPrompt = `${prompt}, style of Studio Ghibli, no logo, no watermark, no text`;
+        const fullPrompt = `${prompt}, no logo, no watermark, no text`;
         const encodedPrompt = encodeURIComponent(fullPrompt);
 
         console.log("API Request URL:", `${apiUrl}${encodedPrompt}`);
@@ -256,4 +258,3 @@ downloadBtn.addEventListener('click', () => {
     a.click();
     document.body.removeChild(a);
 });
-
