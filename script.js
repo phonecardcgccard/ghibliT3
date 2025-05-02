@@ -201,7 +201,6 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
         const encodedPrompt = encodeURIComponent(fullPrompt);
 
         if (imageBase64) {
-            // base64 → Blob
             function base64ToBlob(base64, mime = "image/png") {
                 const byteString = atob(base64);
                 const ab = new ArrayBuffer(byteString.length);
@@ -213,7 +212,6 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
             }
             const blob = base64ToBlob(imageBase64, "image/png");
 
-            // Use FormData for multipart upload
             const formData = new FormData();
             formData.append('image', blob, 'upload.png');
             formData.append('styleStrength', styleStrength / 100);
@@ -223,8 +221,10 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
                 body: formData
             });
 
-            if (!response.ok) {
+            // Check if response is actually an image
+            if (!response.ok || !response.headers.get("content-type")?.startsWith("image")) {
                 const errorText = await response.text();
+                console.error("API response not image:", errorText);
                 throw new Error(`Image-to-Image HTTP error: ${response.status} - ${errorText}`);
             }
 
@@ -232,7 +232,6 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
             const imageUrl = URL.createObjectURL(resultBlob);
             return { success: true, imageUrl };
         } else {
-            // Text to image, add cache-buster
             const imageUrl = `${apiUrl}${encodedPrompt}?nologo=true&t=${Date.now()}`;
             return { success: true, imageUrl };
         }
@@ -252,4 +251,3 @@ downloadBtn.addEventListener('click', () => {
     a.click();
     document.body.removeChild(a);
 });
-
