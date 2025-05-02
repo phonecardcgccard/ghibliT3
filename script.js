@@ -80,6 +80,8 @@ removeImageBtn.addEventListener('click', () => {
     previewContainer.hidden = true;
     uploadArea.hidden = false;
     imageUpload.value = '';
+    generatedImageUrl = null; // Clear the previously generated image URL
+    resultImage.hidden = true; // Hide the previous image
 });
 
 // Function to handle image upload
@@ -93,13 +95,14 @@ function handleImageUpload(file) {
         return;
     }
 
-    uploadedImage = file;
+    uploadedImage = file; // Replace the previous image
     const reader = new FileReader();
 
     reader.onload = (e) => {
         imagePreview.src = e.target.result;
         previewContainer.hidden = false;
         uploadArea.hidden = true;
+        console.log("Updated image preview:", e.target.result); // Debugging log
     };
 
     reader.onerror = () => {
@@ -197,6 +200,7 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
             params.append('image', imageBase64);
             params.append('styleStrength', styleStrength / 100);
 
+            console.log("Sending image-to-image API request with:", imageBase64); // Debugging log
             const response = await fetch(`${apiUrl}${encodedPrompt}?nologo=true`, {
                 method: 'POST',
                 body: params,
@@ -212,7 +216,7 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
 
             return { success: true, imageUrl };
         } else {
-            const imageUrl = `${apiUrl}${encodedPrompt}?nologo=true`;
+            const imageUrl = `${apiUrl}${encodedPrompt}?nologo=true&timestamp=${Date.now()}`;
             const response = await fetch(imageUrl, { method: 'HEAD' });
 
             if (!response.ok) {
@@ -237,4 +241,3 @@ downloadBtn.addEventListener('click', () => {
     a.click();
     document.body.removeChild(a);
 });
-
