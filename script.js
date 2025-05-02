@@ -29,7 +29,7 @@ tabButtons.forEach(button => {
         button.classList.add('active');
         const tabId = button.getAttribute('data-tab');
         document.getElementById(`${tabId}-tab`).classList.add('active');
-        // 重置输出区域
+        // Reset output area
         resultPlaceholder.hidden = false;
         resultImage.hidden = true;
         resultImage.src = '';
@@ -113,7 +113,7 @@ generateBtn.addEventListener('click', async () => {
     let prompt = '';
     let imageBase64 = null;
 
-    // 释放上一次生成的图片ObjectURL
+    // Release previous ObjectURL if any
     if (generatedImageIsObjectUrl && generatedImageUrl) {
         URL.revokeObjectURL(generatedImageUrl);
         generatedImageIsObjectUrl = false;
@@ -201,14 +201,26 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
         const encodedPrompt = encodeURIComponent(fullPrompt);
 
         if (imageBase64) {
-            // 图生图
-            const params = new URLSearchParams();
-            params.append('image', imageBase64);
-            params.append('styleStrength', styleStrength / 100);
+            // base64 → Blob
+            function base64ToBlob(base64, mime = "image/png") {
+                const byteString = atob(base64);
+                const ab = new ArrayBuffer(byteString.length);
+                const ia = new Uint8Array(ab);
+                for (let i = 0; i < byteString.length; i++) {
+                    ia[i] = byteString.charCodeAt(i);
+                }
+                return new Blob([ab], { type: mime });
+            }
+            const blob = base64ToBlob(imageBase64, "image/png");
+
+            // Use FormData for multipart upload
+            const formData = new FormData();
+            formData.append('image', blob, 'upload.png');
+            formData.append('styleStrength', styleStrength / 100);
 
             const response = await fetch(`${apiUrl}${encodedPrompt}?nologo=true&t=${Date.now()}`, {
                 method: 'POST',
-                body: params
+                body: formData
             });
 
             if (!response.ok) {
@@ -216,11 +228,11 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
                 throw new Error(`Image-to-Image HTTP error: ${response.status} - ${errorText}`);
             }
 
-            const blob = await response.blob();
-            const imageUrl = URL.createObjectURL(blob);
+            const resultBlob = await response.blob();
+            const imageUrl = URL.createObjectURL(resultBlob);
             return { success: true, imageUrl };
         } else {
-            // 文生图，加唯一时间戳防止缓存
+            // Text to image, add cache-buster
             const imageUrl = `${apiUrl}${encodedPrompt}?nologo=true&t=${Date.now()}`;
             return { success: true, imageUrl };
         }
@@ -240,4 +252,3 @@ downloadBtn.addEventListener('click', () => {
     a.click();
     document.body.removeChild(a);
 });
-
