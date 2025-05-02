@@ -18,6 +18,7 @@ const styleStrengthValue = document.getElementById('style-strength-value');
 // Variables
 let uploadedImage = null;
 let generatedImageUrl = null;
+let generatedImageIsObjectUrl = false;
 
 // Tab switching functionality
 tabButtons.forEach(button => {
@@ -31,7 +32,9 @@ tabButtons.forEach(button => {
         // 重置输出区域
         resultPlaceholder.hidden = false;
         resultImage.hidden = true;
+        resultImage.src = '';
         loadingIndicator.hidden = true;
+        downloadBtn.disabled = true;
     });
 });
 
@@ -110,134 +113,6 @@ generateBtn.addEventListener('click', async () => {
     let prompt = '';
     let imageBase64 = null;
 
-    if (activeTab === 'text') {
-        prompt = document.getElementById('prompt').value.trim();
-        if (!prompt) {
-            alert('Please enter a prompt');
-            return;
-        }
-        prompt = `${prompt}, Studio Ghibli style`;
-    } else { // Image tab
-        if (!uploadedImage) {
-            alert('Please upload an image');
-            return;
-        }
-        imageBase64 = await getBase64FromFile(uploadedImage);
-        prompt = document.getElementById('image-prompt').value.trim() || 'Studio Ghibli style';
-    }
-
-    // Show loading indicator
-    resultPlaceholder.hidden = true;
-    resultImage.hidden = true;
-    loadingIndicator.hidden = false;
-    generateBtn.disabled = true;
-    downloadBtn.disabled = true;
-
-    try {
-        const result = await generateImage(prompt, imageBase64, styleStrengthSlider.value);
-
-        if (result.success) {
-            generatedImageUrl = result.imageUrl;
-            resultImage.onload = () => {
-                loadingIndicator.hidden = true;
-                resultImage.hidden = false;
-                downloadBtn.disabled = false;
-            };
-            resultImage.onerror = () => {
-                loadingIndicator.hidden = true;
-                resultImage.hidden = true;
-                resultPlaceholder.hidden = false;
-                alert('Failed to load generated image.');
-            };
-            resultImage.src = generatedImageUrl;
-        } else {
-            throw new Error(result.error);
-        }
-    } catch (error) {
-        console.error('Error generating image:', error);
-        alert('An error occurred while generating the image. Please try again.');
-        loadingIndicator.hidden = true;
-        resultPlaceholder.hidden = false;
-    } finally {
-        generateBtn.disabled = false;
-    }
-});
-
-// Function to get base64 from file
-function getBase64FromFile(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => {
-            const base64 = reader.result.split(',')[1];
-            resolve(base64);
-        };
-        reader.onerror = error => reject(error);
-    });
-}
-
-// Function to generate image using Pollinations.ai API
-async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
-    try {
-        const apiUrl = 'https://image.pollinations.ai/prompt/';
-        const fullPrompt = `${prompt}, no logo, no watermark, no text`.trim();
-        const encodedPrompt = encodeURIComponent(fullPrompt);
-
-        if (imageBase64) {
-            const params = new URLSearchParams();
-            params.append('image', imageBase64);
-            params.append('styleStrength', styleStrength / 100);
-
-            const response = await fetch(`${apiUrl}${encodedPrompt}?nologo=true`, {
-                method: 'POST',
-                body: params
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Image-to-Image HTTP error: ${response.status} - ${errorText}`);
-            }
-
-            const blob = await response.blob();
-            const imageUrl = URL.createObjectURL(blob);
-
-            return { success: true, imageUrl };
-        } else {
-            // 直接返回图片 URL，不要用 HEAD 检查
-            const imageUrl = `${apiUrl}${encodedPrompt}?nologo=true&t=${Date.now()}`;
-            return { success: true, imageUrl };
-        }
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-}
-
-// Download functionality
-downloadBtn.addEventListener('click', () => {
-    if (!generatedImageUrl) return;
-
-    const a = document.createElement('a');
-    a.href = generatedImageUrl;
-    a.download = `ghibli-style-image-${Date.now()}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-});
-
-// ...（前面部分与之前一致，省略）...
-
-let uploadedImage = null;
-let generatedImageUrl = null;
-let generatedImageIsObjectUrl = false;
-
-// ...（tab切换与样式部分一致）...
-
-// Generate image functionality
-generateBtn.addEventListener('click', async () => {
-    const activeTab = document.querySelector('.tab-btn.active').getAttribute('data-tab');
-    let prompt = '';
-    let imageBase64 = null;
-
     // 释放上一次生成的图片ObjectURL
     if (generatedImageIsObjectUrl && generatedImageUrl) {
         URL.revokeObjectURL(generatedImageUrl);
@@ -278,7 +153,6 @@ generateBtn.addEventListener('click', async () => {
 
         if (result.success) {
             generatedImageUrl = result.imageUrl;
-            // 判断是否是ObjectURL（图生图）或直接URL（文生图）
             generatedImageIsObjectUrl = !!imageBase64;
             resultImage.onload = () => {
                 loadingIndicator.hidden = true;
@@ -306,7 +180,18 @@ generateBtn.addEventListener('click', async () => {
     }
 });
 
-// ...（getBase64FromFile部分一致）...
+// Function to get base64 from file
+function getBase64FromFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+        };
+        reader.onerror = error => reject(error);
+    });
+}
 
 // Function to generate image using Pollinations.ai API
 async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
@@ -344,4 +229,15 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
     }
 }
 
-// ...（下载按钮部分一致）...
+// Download functionality
+downloadBtn.addEventListener('click', () => {
+    if (!generatedImageUrl) return;
+
+    const a = document.createElement('a');
+    a.href = generatedImageUrl;
+    a.download = `ghibli-style-image-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+});
+
