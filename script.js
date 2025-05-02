@@ -19,15 +19,6 @@ const styleStrengthValue = document.getElementById('style-strength-value');
 let uploadedImage = null;
 let generatedImageUrl = null;
 
-// Debounce utility
-function debounce(func, delay) {
-    let timeout;
-    return (...args) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func(...args), delay);
-    };
-}
-
 // Tab switching functionality
 tabButtons.forEach(button => {
     button.addEventListener('click', () => {
@@ -37,13 +28,17 @@ tabButtons.forEach(button => {
         button.classList.add('active');
         const tabId = button.getAttribute('data-tab');
         document.getElementById(`${tabId}-tab`).classList.add('active');
+        // 重置输出区域
+        resultPlaceholder.hidden = false;
+        resultImage.hidden = true;
+        loadingIndicator.hidden = true;
     });
 });
 
 // Style strength slider
-styleStrengthSlider.addEventListener('input', debounce(() => {
+styleStrengthSlider.addEventListener('input', () => {
     styleStrengthValue.textContent = `${styleStrengthSlider.value}%`;
-}, 300));
+});
 
 // Image upload functionality
 uploadArea.addEventListener('click', () => {
@@ -75,15 +70,11 @@ imageUpload.addEventListener('change', (e) => {
 });
 
 removeImageBtn.addEventListener('click', () => {
-    if (confirm("Are you sure you want to remove the uploaded image?")) {
-        uploadedImage = null;
-        imagePreview.src = '';
-        previewContainer.hidden = true;
-        uploadArea.hidden = false;
-        imageUpload.value = '';
-        generatedImageUrl = null; // Clear the previously generated image URL
-        resultImage.hidden = true; // Hide the previous image
-    }
+    uploadedImage = null;
+    imagePreview.src = '';
+    previewContainer.hidden = true;
+    uploadArea.hidden = false;
+    imageUpload.value = '';
 });
 
 // Function to handle image upload
@@ -97,7 +88,7 @@ function handleImageUpload(file) {
         return;
     }
 
-    uploadedImage = file; // Replace the previous image
+    uploadedImage = file;
     const reader = new FileReader();
 
     reader.onload = (e) => {
@@ -115,11 +106,6 @@ function handleImageUpload(file) {
 
 // Generate image functionality
 generateBtn.addEventListener('click', async () => {
-    if (styleStrengthSlider.value <= 0) {
-        alert('Style strength must be greater than 0');
-        return;
-    }
-
     const activeTab = document.querySelector('.tab-btn.active').getAttribute('data-tab');
     let prompt = '';
     let imageBase64 = null;
@@ -130,18 +116,17 @@ generateBtn.addEventListener('click', async () => {
             alert('Please enter a prompt');
             return;
         }
-        // Add default Ghibli style to the text prompt
         prompt = `${prompt}, Studio Ghibli style`;
-    } else {
+    } else { // Image tab
         if (!uploadedImage) {
             alert('Please upload an image');
             return;
         }
-
         imageBase64 = await getBase64FromFile(uploadedImage);
         prompt = document.getElementById('image-prompt').value.trim() || 'Studio Ghibli style';
     }
 
+    // Show loading indicator
     resultPlaceholder.hidden = true;
     resultImage.hidden = true;
     loadingIndicator.hidden = false;
@@ -153,20 +138,27 @@ generateBtn.addEventListener('click', async () => {
 
         if (result.success) {
             generatedImageUrl = result.imageUrl;
+            resultImage.onload = () => {
+                loadingIndicator.hidden = true;
+                resultImage.hidden = false;
+                downloadBtn.disabled = false;
+            };
+            resultImage.onerror = () => {
+                loadingIndicator.hidden = true;
+                resultImage.hidden = true;
+                resultPlaceholder.hidden = false;
+                alert('Failed to load generated image.');
+            };
             resultImage.src = generatedImageUrl;
-            resultImage.hidden = false;
-            downloadBtn.disabled = false;
-            console.log("Image generated successfully:", generatedImageUrl);
         } else {
-            alert(`Error: ${result.error}`);
-            resultPlaceholder.hidden = false;
+            throw new Error(result.error);
         }
     } catch (error) {
         console.error('Error generating image:', error);
         alert('An error occurred while generating the image. Please try again.');
+        loadingIndicator.hidden = true;
         resultPlaceholder.hidden = false;
     } finally {
-        loadingIndicator.hidden = true;
         generateBtn.disabled = false;
     }
 });
@@ -198,7 +190,7 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
 
             const response = await fetch(`${apiUrl}${encodedPrompt}?nologo=true`, {
                 method: 'POST',
-                body: params,
+                body: params
             });
 
             if (!response.ok) {
@@ -211,13 +203,8 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
 
             return { success: true, imageUrl };
         } else {
-            const imageUrl = `${apiUrl}${encodedPrompt}?nologo=true&timestamp=${Date.now()}`;
-            const response = await fetch(imageUrl, { method: 'HEAD' });
-
-            if (!response.ok) {
-                throw new Error(`Text-to-Image HTTP error: ${response.status}`);
-            }
-
+            // 直接返回图片 URL，不要用 HEAD 检查
+            const imageUrl = `${apiUrl}${encodedPrompt}?nologo=true&t=${Date.now()}`;
             return { success: true, imageUrl };
         }
     } catch (error) {
@@ -236,4 +223,3 @@ downloadBtn.addEventListener('click', () => {
     a.click();
     document.body.removeChild(a);
 });
-
