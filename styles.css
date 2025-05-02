@@ -2,7 +2,6 @@
 :root {
     --primary-color: #4a86e8;
     --secondary-color: #6aa84f;
-    --accent-color: #f6b26b;
     --background-color: #f9f9f9;
     --card-bg-color: #ffffff;
     --text-color: #333333;
@@ -311,3 +310,4 @@ footer {
     color: #777;
     font-size: 0.9rem;
 }
+
