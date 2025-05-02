@@ -104,7 +104,6 @@ function handleImageUpload(file) {
         imagePreview.src = e.target.result;
         previewContainer.hidden = false;
         uploadArea.hidden = true;
-        console.log("Updated image preview:", e.target.result); // Debugging log
     };
 
     reader.onerror = () => {
@@ -157,6 +156,7 @@ generateBtn.addEventListener('click', async () => {
             resultImage.src = generatedImageUrl;
             resultImage.hidden = false;
             downloadBtn.disabled = false;
+            console.log("Image generated successfully:", generatedImageUrl);
         } else {
             alert(`Error: ${result.error}`);
             resultPlaceholder.hidden = false;
@@ -187,12 +187,6 @@ function getBase64FromFile(file) {
 // Function to generate image using Pollinations.ai API
 async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
     try {
-        // Validate styleStrength
-        if (styleStrength < 0 || styleStrength > 100) {
-            throw new Error("Style strength must be between 0 and 100.");
-        }
-
-        // Construct the API endpoint and prompt
         const apiUrl = 'https://image.pollinations.ai/prompt/';
         const fullPrompt = `${prompt}, no logo, no watermark, no text`.trim();
         const encodedPrompt = encodeURIComponent(fullPrompt);
@@ -202,7 +196,6 @@ async function generateImage(prompt, imageBase64 = null, styleStrength = 75) {
             params.append('image', imageBase64);
             params.append('styleStrength', styleStrength / 100);
 
-            console.log("Sending image-to-image API request with:", imageBase64); // Debugging log
             const response = await fetch(`${apiUrl}${encodedPrompt}?nologo=true`, {
                 method: 'POST',
                 body: params,
@@ -243,3 +236,4 @@ downloadBtn.addEventListener('click', () => {
     a.click();
     document.body.removeChild(a);
 });
+
