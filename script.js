@@ -75,13 +75,15 @@ imageUpload.addEventListener('change', (e) => {
 });
 
 removeImageBtn.addEventListener('click', () => {
-    uploadedImage = null;
-    imagePreview.src = '';
-    previewContainer.hidden = true;
-    uploadArea.hidden = false;
-    imageUpload.value = '';
-    generatedImageUrl = null; // Clear the previously generated image URL
-    resultImage.hidden = true; // Hide the previous image
+    if (confirm("Are you sure you want to remove the uploaded image?")) {
+        uploadedImage = null;
+        imagePreview.src = '';
+        previewContainer.hidden = true;
+        uploadArea.hidden = false;
+        imageUpload.value = '';
+        generatedImageUrl = null; // Clear the previously generated image URL
+        resultImage.hidden = true; // Hide the previous image
+    }
 });
 
 // Function to handle image upload
